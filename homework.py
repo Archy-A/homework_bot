@@ -60,7 +60,7 @@ def check_response(response):
     if not isinstance(response, dict):
         logging.error('Не корректные данные.')
         raise TypeError('Данные не словарь.')
-    if not 'homeworks' in response.keys():
+    if 'homeworks' not in response.keys():
         logging.error('нет homeworks в словаре.')
         raise TypeError('нет homeworks в словаре.')
     response = response.get('homeworks')
@@ -105,7 +105,7 @@ def main():
             res = get_api_answer(current_timestamp)
             s_res = check_response(res)
             message = parse_status(s_res[0]) if len(res['homeworks']) \
-             > 0 else 'нет домашки'
+                                             > 0 else 'нет домашки'
             send_message(bot, message)
             current_timestamp = res.get('current_date')
         except Exception as error:
