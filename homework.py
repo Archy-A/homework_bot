@@ -1,7 +1,7 @@
-import os, telegram
+import os
+import telegram
 import requests
 import logging
-
 import time
 from dotenv import load_dotenv
 
@@ -33,6 +33,7 @@ def send_message(bot, message):
     except Exception as error:
         logging.error(f'Ошибка : {error}.')
 
+
 def get_api_answer(current_timestamp):
     """Запрос к API сервису."""
     timestamp = current_timestamp or int(time.time())
@@ -51,6 +52,7 @@ def get_api_answer(current_timestamp):
                       f'Код ответа API: {response.status_code}.')
         raise Exception('Не корректный status_code.')
 
+
 def check_response(response):
     """Проверка ответа API."""
     if type(response) == dict:
@@ -61,6 +63,7 @@ def check_response(response):
         raise TypeError('Данные не спискок.')
     logging.error('Не корректные данные.')
     raise TypeError('Данные не словарь.')
+
 
 def parse_status(homework):
     """Статус домашней работы."""
@@ -73,6 +76,7 @@ def parse_status(homework):
                     f'{verdict}')
     logging.error(f'нет такого статуса {homework_status}')
     raise KeyError(f'нет такого статуса {homework_status}')
+
 
 def check_tokens():
     """Проверка доступности токенов."""
@@ -87,6 +91,7 @@ def check_tokens():
                              f'{key}. Ошибка.')
             return False
     return True
+
 
 def main():
     """Основная функция бота."""
