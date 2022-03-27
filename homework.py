@@ -42,7 +42,8 @@ def get_api_answer(current_timestamp):
         logging.error(f"Ошибка на сервере: {error}.")
     if response.status_code != 200:
         logging.error(
-            f"Не доступен: {ENDPOINT}." f"Код ответа API: {response.status_code}."
+            f"Не доступен: {ENDPOINT}."
+            f"Код ответа API: {response.status_code}."
         )
         raise Exception("Не корректный status_code.")
     logging.debug("status_code доступен.")
@@ -83,7 +84,8 @@ def check_tokens():
     }
     for key, token in tokens.items():
         if token is None:
-            logging.critical(f"Отсутствует переменная окружения:" f"{key}. Ошибка.")
+            logging.critical(f"Отсутствует переменная окружения:"
+                             f"{key}. Ошибка.")
             return False
     return True
 
@@ -97,7 +99,8 @@ def main():
             res = get_api_answer(current_timestamp)
             s_res = check_response(res)
             message = (
-                parse_status(s_res[0]) if len(res["homeworks"]) > 0 else "нет домашки"
+                parse_status(s_res[0]) if len(res["homeworks"]) > 0
+                else "нет домашки"
             )
             send_message(bot, message)
             current_timestamp = res.get("current_date")
