@@ -7,11 +7,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
+
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+TELEGRAM_RETRY_TIME = 600
 
-RETRY_TIME = 600
+PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
@@ -38,54 +39,56 @@ def get_api_answer(current_timestamp):
     """Запрос к API сервису."""
     timestamp = current_timestamp or int(time.time())
     params = {'from_date': timestamp}
-    response = requests.get(
-        ENDPOINT,
-        headers=HEADERS,
-        params=params
-    )
-
-    if response.status_code == 200:
-        logging.debug('Статус не обновлен.')
-        return response.json()
-    else:
+    try:
+        response = requests.get(
+            ENDPOINT,
+            headers=HEADERS,
+            params=params
+        )
+    except requests.RequestException as error:
+        logging.error(f'Ошибка на сервере: {error}.')
+    if response.status_code != 200:
         logging.error(f'Не доступен: {ENDPOINT}.'
                       f'Код ответа API: {response.status_code}.')
         raise Exception('Не корректный status_code.')
+    logging.debug('status_code доступен.')
+    return response.json()
 
 
 def check_response(response):
     """Проверка ответа API."""
-    if type(response) == dict:
-        response = response.get('homeworks')
-        if type(response) == list:
-            return response
+    if not isinstance(response, dict):
+        logging.error('Не корректные данные.')
+        raise TypeError('Данные не словарь.')
+    if not 'homeworks' in response.keys():
+        logging.error('нет homeworks в словаре.')
+        raise TypeError('нет homeworks в словаре.')
+    response = response.get('homeworks')
+    if not isinstance(response, list):
         logging.error('В словаре нет списка.')
         raise TypeError('Данные не спискок.')
-    logging.error('Не корректные данные.')
-    raise TypeError('Данные не словарь.')
+    return response
 
 
 def parse_status(homework):
     """Статус домашней работы."""
-    homework_name = homework.get('homework_name')
-    homework_status = homework.get('status')
-    for stat in HOMEWORK_STATUSES:
-        if stat == homework_status:
-            verdict = HOMEWORK_STATUSES[homework_status]
-            return (f'Изменился статус проверки работы "{homework_name}".'
-                    f'{verdict}')
-    logging.error(f'нет такого статуса {homework_status}')
-    raise KeyError(f'нет такого статуса {homework_status}')
+    homework_status = homework['status']
+    if homework_status not in HOMEWORK_STATUSES:
+        raise KeyError(f'нет такого статуса {homework_status}')
+    homework_name = homework['homework_name']
+    verdict = HOMEWORK_STATUSES[homework_status]
+    return (f'Изменился статус проверки работы "{homework_name}".'
+            f'{verdict}')
 
 
 def check_tokens():
     """Проверка доступности токенов."""
-    token_dict = {
+    tokens = {
         'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
         'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
         'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID,
     }
-    for key, token in token_dict.items():
+    for key, token in tokens.items():
         if token is None:
             logging.critical(f'Отсутствует переменная окружения:'
                              f'{key}. Ошибка.')
@@ -99,18 +102,16 @@ def main():
         try:
             bot = telegram.Bot(token=TELEGRAM_TOKEN)
             current_timestamp = int(time.time())
-            response = get_api_answer(current_timestamp)
-            homework = check_response(response)
-            if len(response['homeworks']) > 0:
-                message = parse_status(homework[0])
-            else:
-                message = 'нет домашки'
+            res = get_api_answer(current_timestamp)
+            s_res = check_response(res)
+            message = parse_status(s_res[0]) if len(res['homeworks']) \
+             > 0 else 'нет домашки'
             send_message(bot, message)
-            current_timestamp = response.get('current_date')
-            time.sleep(RETRY_TIME)
+            current_timestamp = res.get('current_date')
         except Exception as error:
-            logging.error(f'Ошибка: {error}.')
-            time.sleep(RETRY_TIME)
+            logging.exception(f'Ошибка: {error}.')
+        finally:
+            time.sleep(TELEGRAM_RETRY_TIME)
 
 
 if __name__ == '__main__':
