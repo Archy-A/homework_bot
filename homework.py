@@ -112,5 +112,6 @@ def main():
             logging.error(f'Ошибка: {error}.')
             time.sleep(RETRY_TIME)
 
+
 if __name__ == '__main__':
     main()
