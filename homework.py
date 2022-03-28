@@ -35,6 +35,7 @@ def send_message(bot, message):
 def get_api_answer(current_timestamp):
     """Запрос к API сервису."""
     timestamp = current_timestamp or int(time.time())
+    # timestamp = current_timestamp - 360000
     params = {"from_date": timestamp}
     try:
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
@@ -45,7 +46,7 @@ def get_api_answer(current_timestamp):
             f"Не доступен: {ENDPOINT}."
             f"Код ответа API: {response.status_code}."
         )
-        raise Exception("Не корректный status_code.")
+        raise ValueError("Не корректный status_code.")
     logging.debug("status_code доступен.")
     return response.json()
 
@@ -53,20 +54,21 @@ def get_api_answer(current_timestamp):
 def check_response(response):
     """Проверка ответа API."""
     if not isinstance(response, dict):
-        logging.error("Не корректные данные.")
         raise TypeError("Данные не словарь.")
-    if "homeworks" not in response.keys():
-        logging.error("нет homeworks в словаре.")
+    if "homeworks" not in response:
         raise TypeError("нет homeworks в словаре.")
     response = response.get("homeworks")
     if not isinstance(response, list):
-        logging.error("В словаре нет списка.")
         raise TypeError("Данные не спискок.")
     return response
 
 
 def parse_status(homework):
     """Статус домашней работы."""
+    if "status" not in homework:
+        raise KeyError("нет status в словаре.")
+    if "homework_name" not in homework:
+        raise KeyError("нет homework_name в словаре.")
     homework_status = homework["status"]
     if homework_status not in HOMEWORK_STATUSES:
         raise KeyError(f"нет такого статуса {homework_status}")
